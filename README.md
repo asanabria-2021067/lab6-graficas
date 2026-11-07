@@ -193,3 +193,18 @@ Sin refracción ni relieve vs normal:
 ![](docs/orbe_relieve.png)
 
 ---
+
+## Efectos solicitados
+
+| Efecto (pts) | Cuerpo | Archivo · función | Parámetro → qué cambia |
+|---|---|---|---|
+| Material animado (5) | Estrella (también el gaseoso) | `star.rs` · `star()`; `noise_helpers.rs` · `sample4`, `fbm4` | `star_speed` (U / I) → qué tan rápido hierve el plasma; en 0 se congela |
+| Día y noche (5) | Rocoso | `rocky.rs` · `rocky()`, sección *5. Lado nocturno* | `city_lights` (N) → las apaga; el `smoothstep(-0.12, 0.18, n·l)` de `day` → ancho del atardecer donde se encienden |
+| Respuestas distintas a la luz (10) | Rocoso | `rocky.rs` · `rocky()`, sección *4. Iluminación distinta por región* | `specular` (Z); el exponente 90 del océano → tamaño del reflejo del sol (más alto = más pequeño y fuerte) |
+| Nubes procedurales (10) | Rocoso | `rocky.rs` · `cloud_mask()` | `cloud_coverage` ([ / ]) → más o menos nubes; `time * 0.07` → velocidad, distinta a la del terreno |
+| Tormenta / vórtice (10) | Gaseoso | `gas_giant.rs` · `gas_giant()`, sección *1. Tormenta* | `storm_strength` (9 / 0) → cuántas vueltas da la espiral; `storm_radius` → tamaño |
+| Bump mapping (15) | Rocoso | `rocky.rs` · `bump_normal()` y `detail_height()` | `bump_strength` (, / .) → en 0 la tierra se ve plana, en 0.2 muy marcada |
+| Sombras de nubes (20) | Rocoso | `rocky.rs` · `rocky()`, sección *3. Nubes y sus sombras* | `cloud_height` → qué tan lejos cae la sombra de su nube; `cloud_shadows` (X) → las apaga |
+| Parallax dependiente de la vista (15) | Orbe (extra) | `orb.rs` · `orb()`, `core_height()`, `refract()` | `core_relief` (V / M) → profundidad del relieve del núcleo; `orb_ior` (F / G) → cuánto se desplaza el interior al mover la cámara |
+
+**Total: 60 básicos + 90 de efectos = 150** (la nota máxima es 100).
