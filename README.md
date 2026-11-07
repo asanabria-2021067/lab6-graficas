@@ -151,3 +151,45 @@ Los colores se mezclan con máscaras (`mix` + `smoothstep`): primero tierra/océ
 ![](docs/gaseoso_turbulencia.png)
 
 ---
+
+## Extras
+
+Los pide el gusto, no la rúbrica: crear cuerpos adicionales no da puntos por sí solo. El orbe sí aporta un efecto nuevo (parallax).
+
+### 4. Albiceleste — balón · `src/shaders/ball.rs`
+
+| Frente | Atrás |
+|---|---|
+| ![](docs/balon.png) | ![](docs/balon_atras.png) |
+
+**Diseño:** balón con los colores de la bandera argentina: rayas celeste y blanco, el Sol de Mayo dorado, tres estrellas y el 10 en la espalda.
+
+**Patrones y cómo se combinan:**
+
+1. **Rayas:** `-cos(longitud · rayas / 2)` con un `smoothstep` angosto; la fase está elegida para que al frente quede el centro de una raya blanca. Los polos son tapas blancas.
+2. **Costuras:** líneas grises donde el seno pasa por 0 (borde de cada raya) y un anillo alrededor de cada tapa.
+3. **Figuras planas:** para el sol, las estrellas y el número se proyecta el punto al plano tangente de una dirección (`local_uv`) y se dibujan con distancias: el sol es un disco con 32 rayos (rectos y ondulados intercalados con `cos(16·ángulo)`), cada estrella es un radio que cambia con `cos(5·ángulo)`, el 1 es un rectángulo y el 0 un anillo elíptico.
+4. **Material:** granito fino de ruido como bump (las costuras van hundidas). El sintético tiene un brillo suave y el dorado brilla como metal (otro exponente y color de brillo).
+
+**Parámetros:** `ball_stripes` (J / ;), el tamaño de las estrellas en `star_mask` y la fuerza del granito `k`.
+
+### 5. Lumen — orbe de cristal · `src/shaders/orb.rs`
+
+![](docs/orbe.png)
+
+**Diseño:** una esfera de vidrio con nebulosas rosa y azul flotando adentro y un núcleo violeta con vetas que brillan.
+
+**Patrones y cómo se combinan:**
+
+1. **Refracción:** desde el punto de la superficie se calcula el rayo que entra al vidrio con la ley de Snell (`refract`).
+2. **Ray marching:** se avanza en 24 pasos por ese rayo. En cada paso se suma un poco de nebulosa (ruido 4D, así se mueve con el tiempo) y se revisa si ya se chocó con el núcleo.
+3. **Núcleo con campo de altura:** el núcleo es una esfera de radio `core_radius` levantada por un ruido ridged hasta `core_relief`. Cuando el rayo lo toca, se afina el punto con bisección y se pinta con un degradado violeta y vetas turquesa en las crestas.
+4. **Vidrio:** reflejo de Fresnel en el borde, brillo especular muy concentrado y grabados finos fijos en la superficie.
+
+**Parámetros:** `orb_ior` (F / G; con 1.0 no hay refracción), `core_relief` (V / M; con 0 el núcleo es una esfera lisa) y `core_radius`.
+
+Sin refracción ni relieve vs normal:
+
+![](docs/orbe_relieve.png)
+
+---
