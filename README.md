@@ -81,3 +81,73 @@ Los escenarios de cada captura (tiempo, cámara, luz y parámetros) están en `s
 **Sobre la esfera:** la `sphere.obj` del Canvas tiene 192 triángulos con normales planas por cara. Si se usan esas normales la luz se ve en facetas, por eso para iluminar se usa `normalize(posición)` (constante `SMOOTH_SPHERE_NORMALS` en `src/shaders/mod.rs`). Los patrones también usan la posición 3D normalizada en espacio del objeto, así que no hay costuras ni estiramientos en los polos. La silueta sí se ve poligonal, porque la geometría no se toca.
 
 ---
+
+## 1. Solmira — estrella · `src/shaders/star.rs`
+
+![Estrella](docs/estrella.png)
+
+**Diseño:** una estrella naranja muy activa: plasma que hierve, celdas de convección, manchas solares y un borde más rojo y oscuro con corona. No usa la luz externa, porque ella misma es la fuente de luz.
+
+**Patrones y cómo se combinan:**
+
+1. **Turbulencia (calor):** fBm 4D deformado por otros tres fBm (*domain warping*). La cuarta dimensión del ruido es el tiempo, por eso el plasma cambia de forma en su lugar en vez de solo deslizarse.
+2. **Granulación:** ruido de alta frecuencia; donde pasa por cero quedan canales oscuros finos, como las celdas que se ven en fotos del Sol.
+3. **Manchas solares:** ruido de baja frecuencia con dos umbrales, uno para la penumbra y otro para la umbra. Solo salen en dos franjas de latitud.
+4. **Borde (limb darkening):** la temperatura se multiplica por `0.55 + 0.45·sqrt(n·v)`, así el borde se ve más frío y la estrella se siente esférica sin luz.
+5. **Corona:** brillo naranja con `(1 - n·v)^3`.
+
+Todo se junta en un solo valor de *temperatura* (0 a 1) que las manchas y el borde reducen. Ese valor pasa por un degradado de 5 colores: rojo oscuro → rojo → naranja → amarillo → blanco cálido. Al final se suma la corona.
+
+**Parámetros:** `star_activity` (O / P, cantidad de manchas), `star_speed` (U / I, velocidad del plasma), la frecuencia de granulación `p * 20.0` y las paradas del degradado.
+
+`star_activity` 0.1 vs 0.9:
+
+![](docs/estrella_actividad.png)
+
+---
+
+## 2. Tessara — planeta rocoso · `src/shaders/rocky.rs`
+
+![Planeta rocoso](docs/rocoso.png)
+
+**Diseño:** un mundo oceánico con dos continentes grandes, desiertos ocres, praderas, bosques, cordilleras nevadas y casquetes polares. Tiene nubes que se mueven solas, sus sombras, océanos que reflejan el sol y ciudades que se encienden de noche.
+
+**Patrones y cómo se combinan:**
+
+1. **Continentes** (`continents`): fBm de 6 octavas deformado por otro fBm. Se compara con `sea_level`: arriba es tierra y abajo océano, con un `smoothstep` angosto en la costa.
+2. **Biomas:** otro ruido da la humedad (desierto → pradera → bosque) y el frío depende de la latitud y la altura (tundra y nieve).
+3. **Cordilleras:** ruido *ridged* (`1 - |ruido|`) que da crestas finas, pintadas de roca y nieve.
+4. **Océano:** turquesa en la costa y azul profundo lejos de ella.
+5. **Hielo polar:** `smoothstep` sobre la latitud con ruido en el borde.
+6. **Iluminación por región, relieve, nubes, sombras y ciudades:** ver la tabla de efectos.
+
+Los colores se mezclan con máscaras (`mix` + `smoothstep`): primero tierra/océano, encima el hielo. Luego se ilumina cada región a su manera, se suman las ciudades, y al final van las nubes y un halo de atmósfera azul en el borde.
+
+![Lado nocturno](docs/rocoso_noche.png)
+
+**Parámetros:** `sea_level` (- / =), `cloud_coverage` ([ / ]), `cloud_height`, `bump_strength` (, / .), y los interruptores `bump`, `clouds`, `cloud_shadows`, `specular` y `city_lights`.
+
+---
+
+## 3. Orvane — gigante gaseoso · `src/shaders/gas_giant.rs`
+
+![Gigante gaseoso](docs/gaseoso.png)
+
+**Diseño:** bandas crema, óxido y lavanda que se mueven como líquido, con una gran tormenta rojiza en el hemisferio sur que enrosca las bandas a su alrededor.
+
+**Patrones y cómo se combinan:**
+
+1. **Tormenta:** el punto se gira alrededor del centro de la tormenta (Rodrigues), con un ángulo que es grande en el centro y 0 en el borde. Las bandas se calculan con ese punto ya girado, por eso se curvan.
+2. **Deformación líquida:** la latitud se deforma con *domain warping* en dos pasos: un ruido `q` deforma a otro ruido `r`, y `r` deforma la latitud.
+3. **Bandas** (`bands`): senos de dos frecuencias sobre la latitud deformada, más vetas finas (ruido estirado horizontalmente).
+4. **Flujo animado (flow map):** cada franja de latitud se arrastra hacia un lado distinto. Para que el patrón no se estire para siempre, hay dos copias desfasadas medio ciclo que se reinician y se mezclan para ocultar el salto. El ruido además es 4D, así que también cambia de forma.
+5. **Ojo y collar:** el centro se pinta rojizo con los remolinos del mismo ruido torcido y un anillo claro alrededor. Los polos se oscurecen con un tono azulado.
+6. **Luz:** difusa “envuelta” (`(n·l + 0.2) / 1.2`), que suaviza la línea día/noche como una atmósfera gruesa.
+
+**Parámetros:** `storm_strength` (9 / 0), `storm_radius`, `turbulence` (T / Y), `band_count` y `flow_speed`.
+
+`turbulence` 0 vs 0.3:
+
+![](docs/gaseoso_turbulencia.png)
+
+---
