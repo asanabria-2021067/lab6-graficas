@@ -57,3 +57,27 @@ bash tools/make_gifs.sh                 # convierte los cuadros en GIFs (necesit
 Los escenarios de cada captura (tiempo, cámara, luz y parámetros) están en `src/capture.rs`.
 
 ---
+
+## Arquitectura
+
+| Archivo | Contenido |
+|---|---|
+| `src/main.rs` | Ventana de raylib, teclado, bucle principal y textos en pantalla |
+| `src/pipeline.rs` | `vertex_shader` y `render`: rasterizado, depth test y fragment shader |
+| `src/triangle.rs` | Rasterizado con baricéntricas y perspectiva correcta |
+| `src/framebuffer.rs` | Colores, profundidad, fondo estrellado y guardado en PNG |
+| `src/obj.rs` | Cargador `.obj` (v / vt / vn), centra la esfera y la deja de radio 1 |
+| `src/math.rs` | Matrices 4x4, cámara, perspectiva y rotaciones (incluida Rodrigues) |
+| `src/uniforms.rs` | `Uniforms` y `Params` (los parámetros que se mueven con el teclado) |
+| `src/scene.rs` | Cámara orbital, luz y el encuadre propio de cada cuerpo |
+| `src/capture.rs` | Modo `capture` que genera las imágenes del README |
+| `src/shaders/mod.rs` | `fragment_shader`, `mix`, `smoothstep`, `ramp` (degradados) |
+| `src/shaders/noise_helpers.rs` | `sample`, `sample4` (ruido 4D), `fbm`, `fbm4`, `ridged` |
+| `src/shaders/{star,rocky,gas_giant}.rs` | Un shader por cuerpo celeste |
+| `src/shaders/{ball,orb}.rs` | Los dos extras |
+
+**Pipeline:** vértices → vertex shader → rasterizado con z-buffer (se guarda solo el fragmento más cercano de cada píxel) → fragment shader una vez por píxel visible, repartido en hilos con `rayon`. Así los shaders con mucho ruido no se calculan para fragmentos que luego quedan tapados.
+
+**Sobre la esfera:** la `sphere.obj` del Canvas tiene 192 triángulos con normales planas por cara. Si se usan esas normales la luz se ve en facetas, por eso para iluminar se usa `normalize(posición)` (constante `SMOOTH_SPHERE_NORMALS` en `src/shaders/mod.rs`). Los patrones también usan la posición 3D normalizada en espacio del objeto, así que no hay costuras ni estiramientos en los polos. La silueta sí se ve poligonal, porque la geometría no se toca.
+
+---
