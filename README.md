@@ -208,3 +208,84 @@ Sin refracción ni relieve vs normal:
 | Parallax dependiente de la vista (15) | Orbe (extra) | `orb.rs` · `orb()`, `core_height()`, `refract()` | `core_relief` (V / M) → profundidad del relieve del núcleo; `orb_ior` (F / G) → cuánto se desplaza el interior al mover la cámara |
 
 **Total: 60 básicos + 90 de efectos = 150** (la nota máxima es 100).
+
+### Material animado — Estrella
+
+La cámara y la esfera están quietas; lo único que cambia es el material.
+
+![](docs/estrella.gif)
+
+El tiempo es la cuarta coordenada del ruido OpenSimplex, por eso la turbulencia, las celdas y las manchas cambian de forma sin mover la geometría. En el gaseoso el flujo de bandas también es animación del material (`flow_speed`).
+
+### Día y noche — Rocoso
+
+La luz da una vuelta completa: del lado oscuro aparecen las ciudades. En la captura, sin ciudades vs con ciudades.
+
+![](docs/rocoso_luz.gif)
+
+![](docs/rocoso_noche.png)
+
+Se calcula `day = smoothstep(-0.12, 0.18, n·l)`. Las ciudades salen de ruido (tierra cerca de la costa, sin hielo ni frío extremo, con puntitos de ruido fino) y se multiplican por `1 - day`, así solo brillan de noche. Las nubes las tapan en parte.
+
+### Respuestas distintas a la iluminación — Rocoso
+
+Especular apagado vs encendido. En el GIF de arriba se ve cómo el reflejo recorre el mar mientras la tierra queda mate.
+
+![](docs/rocoso_especular.png)
+
+Todo recibe luz difusa, pero el brillo Blinn-Phong `(n·h)^exponente` se multiplica por máscaras: el océano tiene un reflejo fuerte y concentrado (exponente 90), el hielo uno suave y ancho (exponente 14) y la tierra ninguno.
+
+### Nubes procedurales — Rocoso
+
+La esfera no gira en este GIF; solo pasa el tiempo. Los continentes se quedan quietos y las nubes se mueven.
+
+![](docs/rocoso_nubes.gif)
+
+La posición se gira sobre el eje Y según el tiempo (`rotate_y(p, time * 0.07)`), así las nubes van a otro ritmo que el terreno. Un ruido de baja frecuencia las deforma en remolinos y el fBm se estira para formar frentes alargados. Es la misma esfera: la máscara se mezcla encima de la superficie con `mix`.
+
+Cobertura 0.3 vs 0.6:
+
+![](docs/rocoso_cobertura.png)
+
+### Tormenta o vórtice localizado — Gaseoso
+
+Fuerza 0 vs 5: sin tormenta las bandas son normales; con tormenta son las mismas bandas las que se enrollan alrededor del ojo, no un círculo pintado encima.
+
+![](docs/gaseoso_tormenta.png)
+
+![](docs/gaseoso.gif)
+
+Se mide la distancia angular `d` al centro. Si está dentro del radio, el punto se gira alrededor del eje que pasa por el centro un ángulo `fuerza · (1 - d/R)²`: mucho en el centro y nada en el borde. Después se pintan el ojo y el collar.
+
+### Relieve procedural (bump mapping) — Rocoso
+
+Sin relieve vs con relieve, y la luz moviéndose: las sombras de las montañas cambian de lado.
+
+![](docs/rocoso_relieve.png)
+
+![](docs/rocoso_relieve.gif)
+
+`detail_height` es un campo de altura matemático (ruido ridged + ruido fino). En cada fragmento se calcula la altura en el punto y un poquito hacia dos direcciones tangentes. Esas pendientes inclinan la normal: `n' = normalize(n - t·dh/dt·k - b·dh/db·k)`, y la luz difusa usa `n'`. Solo se aplica en tierra.
+
+### Sombras de nubes — Rocoso
+
+Sin sombras vs con sombras: las manchas oscuras quedan del lado contrario a la luz, al lado de cada nube. En el GIF la luz se mueve y las sombras se desplazan con ella.
+
+![](docs/rocoso_sombras.png)
+
+![](docs/rocoso_sombras.gif)
+
+Desde el punto del suelo `p` se lanza un rayo hacia la luz `l` y se calcula dónde cruza la capa de nubes, una esfera imaginaria de radio `r = 1 + cloud_height`:
+`t = -(p·l) + sqrt((p·l)² + r² - 1)`. En ese punto se evalúa la misma `cloud_mask`, y si hay nube el suelo se oscurece. Con la luz de frente la sombra queda casi debajo de la nube; cerca del atardecer se estira lejos.
+
+### Parallax dependiente de la vista — Orbe
+
+El tiempo está congelado y solo se mueve la cámara. Los grabados finos de la superficie se quedan pegados al vidrio, pero el núcleo y las nebulosas se desplazan distinto porque están más adentro: eso da la sensación de profundidad.
+
+![](docs/orbe_parallax.gif)
+
+Cámara a la izquierda vs a la derecha (mismo tiempo):
+
+![](docs/orbe_parallax.png)
+
+Para cada fragmento se sigue el rayo de la vista (ya refractado) hacia dentro de la esfera. El punto donde ese rayo toca el núcleo depende de la dirección de la cámara y del campo de altura procedural `core_height`, así que al mover la cámara el núcleo y su relieve se ven desde otro ángulo y se mueven respecto a la superficie. No es un patrón desplazado con el tiempo: con el tiempo en pausa el efecto sigue ahí.
