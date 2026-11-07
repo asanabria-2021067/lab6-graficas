@@ -1,0 +1,7 @@
+/target
+/docs/frames
+/screenshots
+
+# Archivos de herramientas locales
+.claude/
+CLAUDE.md
